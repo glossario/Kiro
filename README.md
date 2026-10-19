@@ -3,11 +3,18 @@
 Assistente pessoal em Python que entende comandos por **voz** (ou texto) em
 **portugues**, responde falando e executa tarefas no computador.
 
-## Etapa atual: 1 - Comandos por palavra-chave
+## Etapa atual: 2 - Comandos fixos + Inteligencia Artificial (Gemini)
 
-O Jarvis escuta pelo microfone, interpreta o comando por palavras-chave e
-responde. Se o microfone nao estiver disponivel, ele usa entrada por texto
-automaticamente.
+O Jarvis escuta pelo microfone (ou le do teclado) e funciona em duas camadas:
+
+1. **Comandos fixos** (rapidos, offline): abrir programas, sites, hora, data,
+   pesquisar, criar pasta.
+2. **Inteligencia artificial** (Google Gemini, gratuita): qualquer pergunta ou
+   conversa livre que nao seja um comando fixo vai para a IA, que responde em
+   portugues e lembra do contexto da conversa.
+
+Se o microfone nao estiver disponivel, ele usa entrada por texto. Se a chave da
+IA nao estiver configurada, ele continua funcionando so com os comandos fixos.
 
 ### O que ele ja sabe fazer
 
@@ -20,7 +27,20 @@ automaticamente.
 | "pesquisar <algo>"                | Pesquisa no Google                        |
 | "quem foi <pessoa>"               | Resumo da Wikipedia                       |
 | "criar pasta <nome>"              | Cria uma pasta na area de trabalho        |
+| "wikipedia <assunto>"             | Resumo da Wikipedia                       |
+| qualquer pergunta livre           | Responde usando a IA (Gemini)             |
 | "sair" / "tchau"                  | Encerra o Jarvis                          |
+
+## Configurar a IA (Gemini) - gratuito
+
+1. Gere uma chave gratuita em https://aistudio.google.com/apikey
+2. Abra o arquivo `.env` e cole a chave:
+   ```
+   GEMINI_API_KEY=sua_chave_aqui
+   ```
+3. O arquivo `.env` esta no `.gitignore` e nunca vai para o GitHub.
+
+Sem a chave, o Jarvis ainda funciona normalmente com os comandos fixos.
 
 ## Como rodar
 

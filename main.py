@@ -9,7 +9,7 @@ Fluxo:
 
 from __future__ import annotations
 
-from jarvis.cerebro import interpretar
+from jarvis.cerebro import Cerebro
 from jarvis.voz import Falador, Ouvinte
 
 _PALAVRAS_SAIR = {"sair", "tchau", "encerrar", "fechar jarvis", "adeus"}
@@ -29,6 +29,7 @@ def obter_comando(ouvinte: Ouvinte) -> str:
 def main() -> None:
     falador = Falador()
     ouvinte = Ouvinte()
+    cerebro = Cerebro()
 
     if ouvinte.disponivel:
         falador.falar("Ola! Eu sou o Jarvis. Estou te ouvindo. Diga um comando.")
@@ -43,7 +44,7 @@ def main() -> None:
         if any(p in comando for p in _PALAVRAS_SAIR):
             falador.falar("Ate logo!")
             break
-        resposta = interpretar(comando)
+        resposta = cerebro.interpretar(comando)
         falador.falar(resposta)
 
 

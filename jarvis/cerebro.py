@@ -1,7 +1,11 @@
-"""Cerebro do Jarvis: interpreta o comando e escolhe a habilidade.
+"""Cerebro do Jarvis: interpreta o comando e escolhe o que fazer.
 
-Nesta Etapa 1 a interpretacao e por palavras-chave (regras simples).
-Na Etapa 2 vamos plugar uma LLM aqui para entender comandos livres.
+Estrategia hibrida:
+1. Primeiro tenta casar com os comandos por palavra-chave (rapido, offline,
+   acoes concretas no computador).
+2. Se nenhum comando casar, envia a frase para a LLM (Gemini), que responde
+   livremente em portugues. Se a IA nao estiver disponivel, mostra uma
+   mensagem de ajuda.
 """
 
 from __future__ import annotations
@@ -9,6 +13,7 @@ from __future__ import annotations
 from typing import Callable
 
 from . import habilidades
+from .ia import CerebroIA
 
 
 # Cada regra: (lista de gatilhos, funcao que trata o comando).
@@ -18,8 +23,10 @@ _REGRAS: list[tuple[tuple[str, ...], Callable[[str], str]]] = [
     (("que dia", "data de hoje", "dia de hoje"), habilidades.dizer_data),
     (("pesquisar", "pesquise", "buscar", "busque", "procurar", "procure"),
      habilidades.pesquisar_web),
-    (("wikipedia", "quem e", "quem foi", "o que e", "me fale sobre"),
-     habilidades.wikipedia_resumo),
+    # So aciona a Wikipedia quando o usuario pede explicitamente "wikipedia".
+    # Perguntas gerais de conhecimento ("o que e", "quem foi", "explique")
+    # agora vao para a IA, que responde melhor.
+    (("wikipedia",), habilidades.wikipedia_resumo),
     (("criar pasta", "crie pasta"), habilidades.criar_pasta),
     (("abrir site", "abrir youtube", "abrir google", "abrir gmail",
       "abrir github", "abrir whatsapp", "youtube", "gmail", "whatsapp"),
@@ -28,18 +35,28 @@ _REGRAS: list[tuple[tuple[str, ...], Callable[[str], str]]] = [
 ]
 
 
-def interpretar(comando: str) -> str:
-    """Recebe o texto do comando e devolve a resposta do Jarvis."""
-    comando = (comando or "").lower().strip()
-    if not comando:
-        return "Nao entendi. Pode repetir?"
+class Cerebro:
+    """Interpreta comandos combinando regras fixas e a IA."""
 
-    for gatilhos, acao in _REGRAS:
-        if any(g in comando for g in gatilhos):
-            return acao(comando)
+    def __init__(self) -> None:
+        self.ia = CerebroIA()
 
-    return (
-        "Ainda nao sei fazer isso. Em breve vou aprender com uma "
-        "inteligencia artificial. Por enquanto tente: que horas sao, "
-        "abrir chrome, pesquisar <algo>, ou criar pasta <nome>."
-    )
+    def interpretar(self, comando: str) -> str:
+        comando = (comando or "").lower().strip()
+        if not comando:
+            return "Nao entendi. Pode repetir?"
+
+        # 1) Comandos concretos por palavra-chave.
+        for gatilhos, acao in _REGRAS:
+            if any(g in comando for g in gatilhos):
+                return acao(comando)
+
+        # 2) Caiu aqui: deixa a IA responder livremente.
+        if self.ia.disponivel:
+            return self.ia.responder(comando)
+
+        return (
+            "Ainda nao sei fazer isso e minha inteligencia nao esta ativa. "
+            "Configure a chave do Gemini no arquivo .env, ou tente: que horas "
+            "sao, abrir chrome, pesquisar <algo>, ou criar pasta <nome>."
+        )
