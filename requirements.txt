@@ -1,0 +1,13 @@
+# Reconhecimento de voz (fala -> texto)
+# 3.14+ e necessario no Python 3.13 (o modulo "aifc" foi removido do Python).
+SpeechRecognition>=3.14
+PyAudio==0.2.14
+
+# Texto -> fala (voz do Jarvis)
+pyttsx3==2.98
+
+# Utilidades do sistema
+psutil==6.1.1
+
+# Buscas na Wikipedia
+wikipedia==1.4.0
