@@ -18,6 +18,21 @@ from jarvis.voz import Falador, Ouvinte
 
 # Palavra(s) de ativacao. Incluimos variacoes porque o reconhecimento de voz
 # as vezes transcreve diferente ("ei jovem", "e jovem", "a jovem"...).
+# ---------------------------------------------------------------------------
+# CONFIGURACAO DO MODO DE ESCUTA (modo voz)
+#
+# USAR_PALAVRA_ATIVACAO:
+#   True  -> ele so age quando voce diz "Ei Jovem" (modo assistente).
+#   False -> SEMPRE ATIVO: responde qualquer comando, sem palavra de ativacao.
+#
+# COMECAR_ACORDADO (so vale se USAR_PALAVRA_ATIVACAO = True):
+#   True  -> comeca atendendo direto; a palavra de ativacao so volta a ser
+#            necessaria depois que ele dormir.
+#   False -> comeca dormindo (precisa dizer "Ei Jovem" para a primeira acao).
+# ---------------------------------------------------------------------------
+USAR_PALAVRA_ATIVACAO = True
+COMECAR_ACORDADO = False
+
 PALAVRAS_ATIVACAO = ("ei jovem", "e jovem", "ei, jovem", "a jovem", "hey jovem")
 
 # Depois de acordar, ele atende ate este numero de comandos seguidos antes de
@@ -44,12 +59,32 @@ def _e_saida(texto: str) -> bool:
 
 
 def _loop_voz(falador: Falador, ouvinte: Ouvinte, cerebro: Cerebro) -> None:
-    falador.falar(
-        "Ola! Eu sou o Jovem Aprendiz. "
-        "Quando precisar de mim, diga: Ei Jovem."
-    )
-    dormindo = True
-    restantes = 0
+    # Modo SEMPRE ATIVO: responde qualquer comando, sem palavra de ativacao.
+    if not USAR_PALAVRA_ATIVACAO:
+        falador.falar("Ola! Eu sou o Jovem Aprendiz. Estou te ouvindo. "
+                      "Pode falar seu comando.")
+        while True:
+            texto = ouvinte.ouvir()
+            if not texto:
+                continue
+            if _e_saida(texto):
+                falador.falar("Ate logo!")
+                return
+            comando = _remover_ativacao(texto) if _tem_ativacao(texto) else texto
+            falador.falar(cerebro.interpretar(comando))
+        # (loop infinito; so sai pelo "sair")
+
+    # Modo com palavra de ativacao.
+    if COMECAR_ACORDADO:
+        falador.falar("Ola! Eu sou o Jovem Aprendiz. Estou acordado, "
+                      "pode falar seu comando.")
+        dormindo = False
+        restantes = COMANDOS_ANTES_DE_DORMIR
+    else:
+        falador.falar("Ola! Eu sou o Jovem Aprendiz. "
+                      "Quando precisar de mim, diga: Ei Jovem.")
+        dormindo = True
+        restantes = 0
 
     while True:
         texto = ouvinte.ouvir()
