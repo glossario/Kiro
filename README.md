@@ -114,6 +114,18 @@ Para ouvir todas as vozes de qualquer idioma:
 .\.venv\Scripts\python.exe -c "import asyncio, edge_tts; [print(v['ShortName']) for v in asyncio.run(edge_tts.list_voices()) if v['Locale'].startswith('pt')]"
 ```
 
+## Microfone
+
+O microfone usado e escolhido por nome em `jarvis/voz.py`
+(`MICROFONE_NOME = "headset"`). Troque por `"intel"` para usar o microfone do
+notebook, por exemplo. Rode `python -m jarvis.voz` para ver os nomes/indices.
+
+**Erro comum:** se ao abrir aparecer "Microfone indisponivel" com a mensagem
+`'NoneType' object has no attribute 'close'`, quase sempre e porque **outro
+programa esta usando o microfone** - principalmente o **Microsoft Teams**, Zoom,
+Meet, Discord ou uma chamada no navegador. Feche esses programas (saia do Teams
+na bandeja, nao so minimize) e abra o Jovem Aprendiz de novo.
+
 ## Observacoes
 
 - **Voz em portugues:** o Windows pode so ter voz em ingles instalada. Para

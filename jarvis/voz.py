@@ -188,6 +188,11 @@ class Ouvinte:
             self._abrir_microfone(sr)
         except Exception as exc:  # pragma: no cover - depende do ambiente
             print(f"[voz] Microfone indisponivel, usando entrada por texto. Motivo: {exc}")
+            if "close" in str(exc) or "NoneType" in str(exc):
+                print("[voz] Isso costuma acontecer quando OUTRO programa esta "
+                      "usando o microfone (ex: Microsoft Teams, Zoom, Meet, "
+                      "Discord ou uma chamada no navegador).")
+                print("[voz] FECHE esses programas e abra o Jovem Aprendiz de novo.")
             print("[voz] Dica: rode  python -m jarvis.voz  para ver os microfones.")
             self.disponivel = False
 
