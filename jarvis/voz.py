@@ -182,7 +182,8 @@ class Ouvinte:
         self._reconhecedor = None
         self._microfone = None       # usado no modo pyaudio
         self._sd_indice = None       # usado no modo sounddevice
-        self._sd_fs = 16000
+        self._sd_fs = 48000
+        self._sd_canais = 1
 
         # 1) Tenta o motor sounddevice (WASAPI compartilhado, mais robusto
         #    e nao da o erro 'NoneType close' que o PyAudio da pelo .bat).
@@ -211,7 +212,12 @@ class Ouvinte:
 
     # ---- Motor sounddevice (principal) -----------------------------------
     def _tentar_sounddevice(self) -> bool:
-        """Abre o microfone via sounddevice. Retorna True se funcionar."""
+        """Abre o microfone via sounddevice. Retorna True se funcionar.
+
+        Prioriza a API WASAPI (moderna, modo compartilhado) e usa a taxa de
+        amostragem e canais nativos do dispositivo. Testa candidatos ate um
+        abrir de verdade.
+        """
         try:
             import sounddevice as sd
             import speech_recognition as sr  # usado so para reconhecer depois
@@ -219,58 +225,107 @@ class Ouvinte:
             self._sr = sr
             self._reconhecedor = sr.Recognizer()
 
-            indice = self._achar_indice_sd(sd)
-            # Grava um instante para validar que o dispositivo abre mesmo.
-            sd.check_input_settings(device=indice, samplerate=self._sd_fs,
-                                    channels=1)
-            self._sd_indice = indice
-            nome = sd.query_devices(indice)["name"] if indice is not None else "padrao"
-            print(f"[voz] Microfone pronto (sounddevice): {nome}")
-            return True
+            for indice in self._candidatos_sd(sd):
+                try:
+                    info = sd.query_devices(indice)
+                    fs = int(info["default_samplerate"]) or 48000
+                    canais = min(2, info["max_input_channels"]) or 1
+                    # Valida e faz uma gravacao curta de teste.
+                    sd.check_input_settings(device=indice, samplerate=fs,
+                                            channels=canais)
+                    teste = sd.rec(int(0.3 * fs), samplerate=fs, channels=canais,
+                                   dtype="int16", device=indice)
+                    sd.wait()
+                    # Deu certo: guarda a configuracao.
+                    self._sd_indice = indice
+                    self._sd_fs = fs
+                    self._sd_canais = canais
+                    api = sd.query_hostapis(info["hostapi"])["name"]
+                    print(f"[voz] Microfone pronto (sounddevice/{api}): {info['name']}")
+                    return True
+                except Exception:
+                    continue
+            print("[voz] sounddevice: nenhum dispositivo abriu. Tentando PyAudio...")
+            return False
         except Exception as exc:
             print(f"[voz] sounddevice indisponivel ({exc}). Tentando PyAudio...")
             return False
 
     @staticmethod
-    def _achar_indice_sd(sd):
-        """Acha o indice (no sounddevice) do microfone pelo MICROFONE_NOME."""
-        if not MICROFONE_NOME:
-            return None
-        alvo = MICROFONE_NOME.lower()
-        for i, dev in enumerate(sd.query_devices()):
-            if dev["max_input_channels"] > 0 and alvo in dev["name"].lower():
-                return i
-        return None
+    def _candidatos_sd(sd) -> list:
+        """Indices a tentar, priorizando WASAPI > DirectSound > resto, e o
+        microfone cujo nome bate com MICROFONE_NOME."""
+        apis = sd.query_hostapis()
+
+        def prioridade(dev) -> int:
+            nome_api = apis[dev["hostapi"]]["name"].lower()
+            if "wasapi" in nome_api:
+                return 0
+            if "directsound" in nome_api:
+                return 1
+            if "mme" in nome_api:
+                return 3  # MME por ultimo (foi a que deu erro)
+            return 2
+
+        entradas = [
+            (i, d) for i, d in enumerate(sd.query_devices())
+            if d["max_input_channels"] > 0
+        ]
+        # Filtra pelo nome do microfone, se configurado.
+        if MICROFONE_NOME:
+            alvo = MICROFONE_NOME.lower()
+            casados = [(i, d) for i, d in entradas if alvo in d["name"].lower()]
+            if casados:
+                entradas = casados
+        entradas.sort(key=lambda par: prioridade(par[1]))
+        return [i for i, _ in entradas]
 
     def _ouvir_sounddevice(self) -> str | None:
         """Grava do microfone via sounddevice e reconhece com o Google.
 
-        Grava enquanto detecta voz (ate ~2s de silencio) com limite de 8s.
+        Grava um bloco de ate 6 segundos na taxa/canais nativos, converte
+        para mono 16 kHz e envia ao reconhecimento.
         """
         import sounddevice as sd
         import numpy as np
 
         fs = self._sd_fs
+        canais = self._sd_canais
         print("[voz] Ouvindo...")
         try:
-            # Grava um bloco fixo de ate 8 segundos.
-            duracao = 8
-            buffer = sd.rec(int(duracao * fs), samplerate=fs, channels=1,
+            duracao = 6
+            buffer = sd.rec(int(duracao * fs), samplerate=fs, channels=canais,
                             dtype="int16", device=self._sd_indice)
             sd.wait()
         except Exception as exc:
             print(f"[voz] Erro ao gravar: {exc}")
             return None
 
-        audio = np.asarray(buffer).flatten()
+        audio = np.asarray(buffer, dtype=np.int16)
+        # Mistura para mono se veio em estereo.
+        if audio.ndim > 1 and audio.shape[1] > 1:
+            audio = audio.mean(axis=1).astype(np.int16)
+        else:
+            audio = audio.flatten()
+
         if int(np.abs(audio).max()) < 500:
             # Praticamente silencio: nada dito.
             return None
 
-        # Converte para AudioData do speech_recognition e reconhece.
+        # Reamostra para 16 kHz (taxa boa para o reconhecimento), se preciso.
+        destino_fs = 16000
+        if fs != destino_fs:
+            n_destino = int(len(audio) * destino_fs / fs)
+            if n_destino > 0:
+                idx = (np.arange(n_destino) * fs / destino_fs).astype(np.int64)
+                idx = np.clip(idx, 0, len(audio) - 1)
+                audio = audio[idx]
+            fs_usada = destino_fs
+        else:
+            fs_usada = fs
+
         try:
-            dados = audio.tobytes()
-            audio_sr = self._sr.AudioData(dados, fs, 2)  # 2 bytes = int16
+            audio_sr = self._sr.AudioData(audio.tobytes(), fs_usada, 2)
             texto = self._reconhecedor.recognize_google(audio_sr, language="pt-BR")
             print(f"Voce (voz): {texto}")
             return texto.lower()
