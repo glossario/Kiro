@@ -185,36 +185,54 @@ class Ouvinte:
 
             self._sr = sr
             self._reconhecedor = sr.Recognizer()
-            # Escolhe o microfone: por nome, por indice, ou o padrao.
-            indice = None
-            if MICROFONE_NOME:
-                indice = _achar_indice_por_nome(MICROFONE_NOME)
-                if indice is None:
-                    print(f"[voz] Microfone com nome '{MICROFONE_NOME}' nao "
-                          "encontrado. Usando o padrao do Windows.")
-            if indice is None and MICROFONE_INDICE is not None:
-                indice = MICROFONE_INDICE
-
-            if indice is not None:
-                nome = sr.Microphone.list_microphone_names()[indice]
-                self._microfone = sr.Microphone(device_index=indice)
-                print(f"[voz] Usando microfone [{indice}]: {nome}")
-            else:
-                self._microfone = sr.Microphone()
-                print("[voz] Usando o microfone padrao do Windows.")
-            # Calibra o ruido de fundo uma vez.
-            with self._microfone as fonte:
-                self._reconhecedor.adjust_for_ambient_noise(fonte, duration=0.6)
-            # Garante um minimo de sensibilidade (evita nao captar fala baixa).
-            if self._reconhecedor.energy_threshold < 300:
-                self._reconhecedor.energy_threshold = 300
-            # Reajusta sozinho conforme o ambiente muda.
-            self._reconhecedor.dynamic_energy_threshold = True
-            self.disponivel = True
+            self._abrir_microfone(sr)
         except Exception as exc:  # pragma: no cover - depende do ambiente
             print(f"[voz] Microfone indisponivel, usando entrada por texto. Motivo: {exc}")
             print("[voz] Dica: rode  python -m jarvis.voz  para ver os microfones.")
             self.disponivel = False
+
+    def _candidatos(self, sr) -> list:
+        """Lista de indices a tentar, em ordem de preferencia.
+
+        Tenta todos os indices que batem com MICROFONE_NOME, depois o
+        MICROFONE_INDICE, e por fim o padrao do Windows (None).
+        """
+        indices: list = []
+        nomes = sr.Microphone.list_microphone_names()
+        if MICROFONE_NOME:
+            alvo = MICROFONE_NOME.lower()
+            indices += [i for i, n in enumerate(nomes) if alvo in (n or "").lower()]
+        if MICROFONE_INDICE is not None and MICROFONE_INDICE not in indices:
+            indices.append(MICROFONE_INDICE)
+        indices.append(None)  # microfone padrao do Windows (ultimo recurso)
+        return indices
+
+    def _abrir_microfone(self, sr) -> None:
+        """Tenta abrir e calibrar cada candidato ate um funcionar."""
+        nomes = sr.Microphone.list_microphone_names()
+        ultimo_erro = ""
+        for indice in self._candidatos(sr):
+            try:
+                mic = (sr.Microphone(device_index=indice)
+                       if indice is not None else sr.Microphone())
+                with mic as fonte:
+                    self._reconhecedor.adjust_for_ambient_noise(fonte, duration=0.6)
+                # Deu certo: guarda e configura a sensibilidade.
+                self._microfone = mic
+                if self._reconhecedor.energy_threshold < 300:
+                    self._reconhecedor.energy_threshold = 300
+                self._reconhecedor.dynamic_energy_threshold = True
+                self.disponivel = True
+                etiqueta = (f"[{indice}] {nomes[indice]}"
+                            if indice is not None else "padrao do Windows")
+                print(f"[voz] Microfone pronto: {etiqueta}")
+                return
+            except Exception as exc:
+                ultimo_erro = str(exc)
+                rotulo = indice if indice is not None else "padrao"
+                print(f"[voz] Microfone {rotulo} nao abriu ({exc}). Tentando o proximo...")
+        # Nenhum candidato funcionou.
+        raise RuntimeError(ultimo_erro or "nenhum microfone disponivel")
 
     def ouvir(self) -> str | None:
         """Escuta uma frase e devolve o texto reconhecido (ou None)."""
