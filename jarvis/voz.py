@@ -27,6 +27,23 @@ VOZ_EDGE = "pt-BR-FranciscaNeural"
 VELOCIDADE = "+8%"
 TOM = "+0Hz"
 
+# ---------------------------------------------------------------------------
+# MICROFONE
+# Deixe None para usar o microfone padrao do Windows. Se o padrao nao captar
+# som, rode:  python -m jarvis.voz   (lista os microfones) e coloque aqui o
+# numero (indice) do microfone certo. Ex: MICROFONE_INDICE = 1
+# ---------------------------------------------------------------------------
+MICROFONE_INDICE = None
+
+
+def listar_microfones() -> None:
+    """Imprime os microfones disponiveis com seus indices."""
+    import speech_recognition as sr
+
+    print("Microfones disponiveis (use o numero em MICROFONE_INDICE):")
+    for i, nome in enumerate(sr.Microphone.list_microphone_names()):
+        print(f"  [{i}] {nome}")
+
 
 class Falador:
     """Converte texto em fala. Tenta Edge TTS; se falhar, usa pyttsx3."""
@@ -152,13 +169,24 @@ class Ouvinte:
 
             self._sr = sr
             self._reconhecedor = sr.Recognizer()
-            self._microfone = sr.Microphone()
+            # Usa o microfone escolhido no config, ou o padrao do Windows.
+            if MICROFONE_INDICE is not None:
+                self._microfone = sr.Microphone(device_index=MICROFONE_INDICE)
+                print(f"[voz] Usando microfone indice {MICROFONE_INDICE}.")
+            else:
+                self._microfone = sr.Microphone()
             # Calibra o ruido de fundo uma vez.
             with self._microfone as fonte:
-                self._reconhecedor.adjust_for_ambient_noise(fonte, duration=0.5)
+                self._reconhecedor.adjust_for_ambient_noise(fonte, duration=0.6)
+            # Garante um minimo de sensibilidade (evita nao captar fala baixa).
+            if self._reconhecedor.energy_threshold < 300:
+                self._reconhecedor.energy_threshold = 300
+            # Reajusta sozinho conforme o ambiente muda.
+            self._reconhecedor.dynamic_energy_threshold = True
             self.disponivel = True
         except Exception as exc:  # pragma: no cover - depende do ambiente
             print(f"[voz] Microfone indisponivel, usando entrada por texto. Motivo: {exc}")
+            print("[voz] Dica: rode  python -m jarvis.voz  para ver os microfones.")
             self.disponivel = False
 
     def ouvir(self) -> str | None:
@@ -180,3 +208,9 @@ class Ouvinte:
         except Exception as exc:
             print(f"[voz] Erro ao reconhecer: {exc}")
             return None
+
+
+if __name__ == "__main__":
+    # Util: "python -m jarvis.voz" lista os microfones para voce descobrir
+    # qual indice colocar em MICROFONE_INDICE.
+    listar_microfones()
