@@ -18,9 +18,35 @@ from .ia import CerebroIA
 
 # Cada regra: (lista de gatilhos, funcao que trata o comando).
 # A ordem importa - a primeira regra que casar e usada.
+# A ORDEM IMPORTA: a primeira regra que casar e usada. Regras mais
+# especificas devem vir antes das mais genericas.
 _REGRAS: list[tuple[tuple[str, ...], Callable[[str], str]]] = [
     (("que horas", "horas sao", "hora agora"), habilidades.dizer_hora),
     (("que dia", "data de hoje", "dia de hoje"), habilidades.dizer_data),
+
+    # Controle de volume: vem ANTES de "tocar musica" porque "mudo/volume"
+    # sao intencoes especificas (ex: "coloca no mudo" nao e tocar musica).
+    (("volume", "aumentar som", "diminuir som", "mudo", "silenciar",
+      "mutar", "mais alto", "mais baixo"),
+     habilidades.controlar_volume),
+
+    # Tocar musica: vem ANTES de "abrir youtube"/"youtube" para nao conflitar.
+    (("tocar musica", "toque musica", "tocar ", "toque ", "coloca ",
+      "colocar ", "poe ", "por "),
+     habilidades.tocar_musica),
+
+    # Previsao do tempo.
+    (("previsao do tempo", "como esta o tempo", "como ta o tempo",
+      "tempo em", "clima em", "temperatura em", "clima", "temperatura"),
+     habilidades.previsao_tempo),
+
+    # Controle do sistema.
+    (("bloquear tela", "bloquear o computador", "travar tela", "trancar tela"),
+     habilidades.bloquear_tela),
+    (("tirar print", "tira print", "captura de tela", "capturar tela",
+      "screenshot", "printar"),
+     habilidades.tirar_print),
+
     (("pesquisar", "pesquise", "buscar", "busque", "procurar", "procure"),
      habilidades.pesquisar_web),
     # So aciona a Wikipedia quando o usuario pede explicitamente "wikipedia".

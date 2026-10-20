@@ -28,6 +28,11 @@ IA nao estiver configurada, ele continua funcionando so com os comandos fixos.
 | "quem foi <pessoa>"               | Resumo da Wikipedia                       |
 | "criar pasta <nome>"              | Cria uma pasta na area de trabalho        |
 | "wikipedia <assunto>"             | Resumo da Wikipedia                       |
+| "tocar <musica>"                  | Toca a musica no YouTube                  |
+| "como esta o tempo em <cidade>"   | Previsao do tempo atual                   |
+| "aumentar/diminuir volume", "mudo"| Controla o volume do Windows              |
+| "bloquear tela"                   | Bloqueia o computador                     |
+| "tirar print"                     | Salva uma captura de tela em Imagens      |
 | qualquer pergunta livre           | Responde usando a IA (Gemini)             |
 | "sair" / "tchau"                  | Encerra o Jovem Aprendiz                  |
 
