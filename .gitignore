@@ -28,3 +28,7 @@ npm-debug.log*
 Thumbs.db
 .vscode/
 .idea/
+
+# Amostras/arquivos de audio temporarios
+amostra_*.mp3
+*.mp3

@@ -1,5 +1,9 @@
 """Modulo de voz do Jarvis: fala (TTS) e escuta (STT).
 
+A fala usa duas camadas:
+1. Edge TTS (vozes neurais em pt-BR, soam naturais - precisa de internet).
+2. pyttsx3 (voz offline do Windows) como reserva automatica.
+
 Foi desenhado para degradar com elegancia: se o microfone ou as
 bibliotecas de audio nao estiverem disponiveis, o Jarvis continua
 funcionando apenas por texto.
@@ -7,24 +11,99 @@ funcionando apenas por texto.
 
 from __future__ import annotations
 
+import asyncio
+import os
+import tempfile
+
+# ---------------------------------------------------------------------------
+# CONFIGURACAO DA VOZ  -- mude aqui para personalizar.
+# Vozes pt-BR disponiveis no Edge TTS:
+#   pt-BR-FranciscaNeural  (feminina, natural)
+#   pt-BR-AntonioNeural    (masculina)
+#   pt-BR-ThalitaMultilingualNeural (feminina, multilingue)
+# VELOCIDADE: ex. "+0%", "+10%", "-10%".  TOM (pitch): ex. "+0Hz", "+20Hz".
+# ---------------------------------------------------------------------------
+VOZ_EDGE = "pt-BR-FranciscaNeural"
+VELOCIDADE = "+8%"
+TOM = "+0Hz"
+
 
 class Falador:
-    """Converte texto em fala usando pyttsx3 (offline)."""
+    """Converte texto em fala. Tenta Edge TTS; se falhar, usa pyttsx3."""
 
     def __init__(self) -> None:
+        self._edge_ok = False
         self._engine = None
+        self._preparar_edge()
+        self._preparar_pyttsx3()
+
+    # ---- Edge TTS (motor principal) --------------------------------------
+    def _preparar_edge(self) -> None:
+        try:
+            import edge_tts  # noqa: F401
+
+            self._edge_ok = True
+        except Exception as exc:  # pragma: no cover
+            print(f"[voz] Edge TTS indisponivel ({exc}). Usando voz offline.")
+            self._edge_ok = False
+
+    def _falar_edge(self, texto: str) -> bool:
+        """Gera o audio com Edge TTS e toca. Retorna True se deu certo."""
+        try:
+            import edge_tts
+
+            caminho = os.path.join(tempfile.gettempdir(), "jovem_aprendiz_fala.mp3")
+
+            async def _gerar() -> None:
+                com = edge_tts.Communicate(
+                    texto, VOZ_EDGE, rate=VELOCIDADE, pitch=TOM
+                )
+                await com.save(caminho)
+
+            asyncio.run(_gerar())
+            self._tocar(caminho)
+            return True
+        except Exception as exc:
+            print(f"[voz] Falha no Edge TTS ({exc}). Caindo para voz offline.")
+            return False
+
+    @staticmethod
+    def _tocar(caminho_mp3: str) -> None:
+        """Toca o MP3 de forma sincrona usando o Windows Media Player (SAPI)."""
+        import subprocess
+
+        # Usa o player nativo do Windows via PowerShell, aguardando terminar.
+        ps = (
+            "Add-Type -AssemblyName presentationCore; "
+            "$p = New-Object System.Windows.Media.MediaPlayer; "
+            f"$p.Open([uri]'{caminho_mp3}'); "
+            "Start-Sleep -Milliseconds 300; "
+            "$p.Play(); "
+            "while ($p.NaturalDuration.HasTimeSpan -eq $false) "
+            "{ Start-Sleep -Milliseconds 50 }; "
+            "Start-Sleep -Seconds $p.NaturalDuration.TimeSpan.TotalSeconds; "
+            "$p.Close()"
+        )
+        subprocess.run(
+            ["powershell", "-NoProfile", "-Command", ps],
+            check=False,
+            capture_output=True,
+        )
+
+    # ---- pyttsx3 (reserva offline) ---------------------------------------
+    def _preparar_pyttsx3(self) -> None:
         try:
             import pyttsx3
 
             self._engine = pyttsx3.init()
             self._engine.setProperty("rate", 180)
             self._configurar_voz_pt()
-        except Exception as exc:  # pragma: no cover - depende do ambiente
-            print(f"[voz] TTS indisponivel, usando apenas texto. Motivo: {exc}")
+        except Exception as exc:  # pragma: no cover
             self._engine = None
+            if not self._edge_ok:
+                print(f"[voz] TTS indisponivel, usando apenas texto. Motivo: {exc}")
 
     def _configurar_voz_pt(self) -> None:
-        """Tenta escolher uma voz em portugues, se existir no sistema."""
         if self._engine is None:
             return
         try:
@@ -39,8 +118,7 @@ class Falador:
         except Exception:
             pass
 
-    def falar(self, texto: str) -> None:
-        print(f"Jovem Aprendiz: {texto}")
+    def _falar_offline(self, texto: str) -> None:
         if self._engine is None:
             return
         try:
@@ -48,6 +126,13 @@ class Falador:
             self._engine.runAndWait()
         except Exception as exc:  # pragma: no cover
             print(f"[voz] Falha ao falar: {exc}")
+
+    # ---- API publica ------------------------------------------------------
+    def falar(self, texto: str) -> None:
+        print(f"Jovem Aprendiz: {texto}")
+        if self._edge_ok and self._falar_edge(texto):
+            return
+        self._falar_offline(texto)
 
 
 class Ouvinte:

@@ -68,6 +68,33 @@ main.py            # ponto de entrada
 requirements.txt   # dependencias
 ```
 
+## Personalizar a voz
+
+A voz usa **Edge TTS** (vozes neurais em pt-BR, soam naturais - precisa de
+internet). Se ficar offline, cai automaticamente para a voz do Windows.
+
+Para trocar a voz, edite o topo de `jarvis/voz.py`:
+
+```python
+VOZ_EDGE = "pt-BR-FranciscaNeural"  # feminina (padrao)
+VELOCIDADE = "+8%"                   # ex: "+0%", "+20%", "-10%"
+TOM = "+0Hz"                         # ex: "+0Hz", "+30Hz", "-20Hz"
+```
+
+Vozes pt-BR disponiveis:
+
+| Voz                               | Genero    |
+|-----------------------------------|-----------|
+| `pt-BR-FranciscaNeural`           | feminina  |
+| `pt-BR-AntonioNeural`             | masculina |
+| `pt-BR-ThalitaMultilingualNeural` | feminina  |
+
+Para ouvir todas as vozes de qualquer idioma:
+
+```powershell
+.\.venv\Scripts\python.exe -c "import asyncio, edge_tts; [print(v['ShortName']) for v in asyncio.run(edge_tts.list_voices()) if v['Locale'].startswith('pt')]"
+```
+
 ## Observacoes
 
 - **Voz em portugues:** o Windows pode so ter voz em ingles instalada. Para

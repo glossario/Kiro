@@ -3,7 +3,10 @@
 SpeechRecognition>=3.14
 PyAudio==0.2.14
 
-# Texto -> fala (voz do Jarvis)
+# Texto -> fala (voz do Jovem Aprendiz)
+# edge-tts: vozes neurais pt-BR naturais (online).
+# pyttsx3: voz offline do Windows, usada como reserva.
+edge-tts>=7.0
 pyttsx3==2.98
 
 # Utilidades do sistema
