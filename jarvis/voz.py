@@ -29,11 +29,27 @@ TOM = "+0Hz"
 
 # ---------------------------------------------------------------------------
 # MICROFONE
-# Deixe None para usar o microfone padrao do Windows. Se o padrao nao captar
-# som, rode:  python -m jarvis.voz   (lista os microfones) e coloque aqui o
-# numero (indice) do microfone certo. Ex: MICROFONE_INDICE = 1
+# Duas formas de escolher (nesta ordem de prioridade):
+#  1. MICROFONE_NOME: parte do nome do microfone (ex: "headset", "intel").
+#     E o jeito recomendado, pois nao quebra quando os indices mudam ao
+#     conectar/desconectar dispositivos.
+#  2. MICROFONE_INDICE: numero fixo (use so se precisar). Deixe None para
+#     usar o padrao do Windows.
+# Rode  python -m jarvis.voz  para ver os nomes/indices disponiveis.
 # ---------------------------------------------------------------------------
+MICROFONE_NOME = "headset"   # ex: "headset", "intel", ou None
 MICROFONE_INDICE = None
+
+
+def _achar_indice_por_nome(trecho: str):
+    """Devolve o indice do primeiro microfone cujo nome contem `trecho`."""
+    import speech_recognition as sr
+
+    trecho = trecho.lower()
+    for i, nome in enumerate(sr.Microphone.list_microphone_names()):
+        if trecho in (nome or "").lower():
+            return i
+    return None
 
 
 def listar_microfones() -> None:
@@ -169,12 +185,23 @@ class Ouvinte:
 
             self._sr = sr
             self._reconhecedor = sr.Recognizer()
-            # Usa o microfone escolhido no config, ou o padrao do Windows.
-            if MICROFONE_INDICE is not None:
-                self._microfone = sr.Microphone(device_index=MICROFONE_INDICE)
-                print(f"[voz] Usando microfone indice {MICROFONE_INDICE}.")
+            # Escolhe o microfone: por nome, por indice, ou o padrao.
+            indice = None
+            if MICROFONE_NOME:
+                indice = _achar_indice_por_nome(MICROFONE_NOME)
+                if indice is None:
+                    print(f"[voz] Microfone com nome '{MICROFONE_NOME}' nao "
+                          "encontrado. Usando o padrao do Windows.")
+            if indice is None and MICROFONE_INDICE is not None:
+                indice = MICROFONE_INDICE
+
+            if indice is not None:
+                nome = sr.Microphone.list_microphone_names()[indice]
+                self._microfone = sr.Microphone(device_index=indice)
+                print(f"[voz] Usando microfone [{indice}]: {nome}")
             else:
                 self._microfone = sr.Microphone()
+                print("[voz] Usando o microfone padrao do Windows.")
             # Calibra o ruido de fundo uma vez.
             with self._microfone as fonte:
                 self._reconhecedor.adjust_for_ambient_noise(fonte, duration=0.6)

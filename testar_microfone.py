@@ -14,9 +14,9 @@ from __future__ import annotations
 
 import speech_recognition as sr
 
-# Testamos apenas alguns indices representativos (os 3 microfones reais,
-# em sua primeira ocorrencia). Ajuste se quiser testar outros.
-INDICES_PARA_TESTAR = [1, 2, 3]
+# Testamos os microfones reais (headset e microfone do notebook).
+# Ajuste se quiser testar outros indices (rode "python -m jarvis.voz").
+INDICES_PARA_TESTAR = [1, 2]
 
 
 def testar(indice: int) -> None:
