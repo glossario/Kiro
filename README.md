@@ -16,6 +16,20 @@ O Jovem Aprendiz escuta pelo microfone (ou le do teclado) e funciona em duas cam
 Se o microfone nao estiver disponivel, ele usa entrada por texto. Se a chave da
 IA nao estiver configurada, ele continua funcionando so com os comandos fixos.
 
+### Palavra de ativacao: "Ei Jovem"
+
+No modo voz, ele fica "dormindo" e so acorda quando voce diz **"Ei Jovem"**.
+Assim ele nao reage a qualquer conversa. Exemplos:
+
+- "Ei Jovem" -> ele responde "Oi! Pode falar."
+- "Ei Jovem, que horas sao" -> ja executa o comando direto.
+
+Depois de acordar, ele atende varios comandos seguidos e, apos um tempo sem uso,
+volta a dormir (basta chamar "Ei Jovem" de novo). No modo texto a palavra de
+ativacao e opcional.
+
+Para mudar a palavra de ativacao, edite `PALAVRAS_ATIVACAO` no topo de `main.py`.
+
 ### O que ele ja sabe fazer
 
 | Diga / digite                     | Acao                                      |
