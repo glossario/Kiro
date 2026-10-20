@@ -1,11 +1,11 @@
-# Jarvis
+# Jovem Aprendiz
 
 Assistente pessoal em Python que entende comandos por **voz** (ou texto) em
 **portugues**, responde falando e executa tarefas no computador.
 
 ## Etapa atual: 2 - Comandos fixos + Inteligencia Artificial (Gemini)
 
-O Jarvis escuta pelo microfone (ou le do teclado) e funciona em duas camadas:
+O Jovem Aprendiz escuta pelo microfone (ou le do teclado) e funciona em duas camadas:
 
 1. **Comandos fixos** (rapidos, offline): abrir programas, sites, hora, data,
    pesquisar, criar pasta.
@@ -29,7 +29,7 @@ IA nao estiver configurada, ele continua funcionando so com os comandos fixos.
 | "criar pasta <nome>"              | Cria uma pasta na area de trabalho        |
 | "wikipedia <assunto>"             | Resumo da Wikipedia                       |
 | qualquer pergunta livre           | Responde usando a IA (Gemini)             |
-| "sair" / "tchau"                  | Encerra o Jarvis                          |
+| "sair" / "tchau"                  | Encerra o Jovem Aprendiz                  |
 
 ## Configurar a IA (Gemini) - gratuito
 
@@ -40,7 +40,7 @@ IA nao estiver configurada, ele continua funcionando so com os comandos fixos.
    ```
 3. O arquivo `.env` esta no `.gitignore` e nunca vai para o GitHub.
 
-Sem a chave, o Jarvis ainda funciona normalmente com os comandos fixos.
+Sem a chave, o Jovem Aprendiz ainda funciona normalmente com os comandos fixos.
 
 ## Como rodar
 
@@ -62,7 +62,7 @@ python main.py
 jarvis/
   __init__.py
   voz.py           # fala (TTS) e escuta (STT)
-  habilidades.py   # as acoes que o Jarvis executa
+  habilidades.py   # as acoes que o Jovem Aprendiz executa
   cerebro.py       # interpreta o comando e escolhe a habilidade
 main.py            # ponto de entrada
 requirements.txt   # dependencias
@@ -72,7 +72,7 @@ requirements.txt   # dependencias
 
 - **Voz em portugues:** o Windows pode so ter voz em ingles instalada. Para
   uma voz em pt-BR, va em *Configuracoes > Hora e idioma > Fala* e adicione a
-  voz portuguesa. O Jarvis seleciona automaticamente uma voz pt se existir.
+  voz portuguesa. O Jovem Aprendiz seleciona automaticamente uma voz pt se existir.
 - **Python 3.13+:** use `SpeechRecognition>=3.14` (versoes antigas quebram
   porque dependem do modulo `aifc`, removido do Python 3.13).
 

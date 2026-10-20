@@ -40,7 +40,7 @@ class Falador:
             pass
 
     def falar(self, texto: str) -> None:
-        print(f"Jarvis: {texto}")
+        print(f"Jovem Aprendiz: {texto}")
         if self._engine is None:
             return
         try:

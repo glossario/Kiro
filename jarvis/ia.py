@@ -13,7 +13,7 @@ import time
 _MODELO = "gemini-flash-latest"
 
 _INSTRUCAO_SISTEMA = (
-    "Voce e o Jarvis, um assistente pessoal brasileiro. "
+    "Voce e o Jovem Aprendiz, um assistente pessoal brasileiro. "
     "Responda SEMPRE em portugues do Brasil, de forma curta, clara e direta "
     "(no maximo 2 ou 3 frases, pois a resposta sera falada em voz alta). "
     "Seja amigavel e objetivo. Evite listas longas e simbolos que soam mal "
@@ -52,7 +52,7 @@ class CerebroIA:
                 ),
             )
             self.disponivel = True
-            print("[ia] Gemini conectado. Jarvis agora entende comandos livres.")
+            print("[ia] Gemini conectado. O Jovem Aprendiz agora entende comandos livres.")
         except Exception as exc:  # pragma: no cover - depende do ambiente/rede
             print(f"[ia] Nao foi possivel iniciar a IA: {exc}")
             self.disponivel = False

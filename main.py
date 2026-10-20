@@ -12,7 +12,7 @@ from __future__ import annotations
 from jarvis.cerebro import Cerebro
 from jarvis.voz import Falador, Ouvinte
 
-_PALAVRAS_SAIR = {"sair", "tchau", "encerrar", "fechar jarvis", "adeus"}
+_PALAVRAS_SAIR = {"sair", "tchau", "encerrar", "fechar", "adeus"}
 
 
 def obter_comando(ouvinte: Ouvinte) -> str:
@@ -32,9 +32,9 @@ def main() -> None:
     cerebro = Cerebro()
 
     if ouvinte.disponivel:
-        falador.falar("Ola! Eu sou o Jarvis. Estou te ouvindo. Diga um comando.")
+        falador.falar("Ola! Eu sou o Jovem Aprendiz. Estou te ouvindo. Diga um comando.")
     else:
-        falador.falar("Ola! Eu sou o Jarvis. O microfone nao esta disponivel, "
+        falador.falar("Ola! Eu sou o Jovem Aprendiz. O microfone nao esta disponivel, "
                       "entao vamos por texto. Digite um comando.")
 
     while True:
