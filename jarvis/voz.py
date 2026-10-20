@@ -177,15 +177,28 @@ class Ouvinte:
 
     def __init__(self) -> None:
         self.disponivel = False
+        self.motor = None  # "sounddevice" ou "pyaudio"
         self._sr = None
         self._reconhecedor = None
-        self._microfone = None
+        self._microfone = None       # usado no modo pyaudio
+        self._sd_indice = None       # usado no modo sounddevice
+        self._sd_fs = 16000
+
+        # 1) Tenta o motor sounddevice (WASAPI compartilhado, mais robusto
+        #    e nao da o erro 'NoneType close' que o PyAudio da pelo .bat).
+        if self._tentar_sounddevice():
+            self.disponivel = True
+            self.motor = "sounddevice"
+            return
+
+        # 2) Reserva: PyAudio via speech_recognition.
         try:
             import speech_recognition as sr
 
             self._sr = sr
             self._reconhecedor = sr.Recognizer()
             self._abrir_microfone(sr)
+            self.motor = "pyaudio"
         except Exception as exc:  # pragma: no cover - depende do ambiente
             print(f"[voz] Microfone indisponivel, usando entrada por texto. Motivo: {exc}")
             if "close" in str(exc) or "NoneType" in str(exc):
@@ -195,6 +208,78 @@ class Ouvinte:
                 print("[voz] FECHE esses programas e abra o Jovem Aprendiz de novo.")
             print("[voz] Dica: rode  python -m jarvis.voz  para ver os microfones.")
             self.disponivel = False
+
+    # ---- Motor sounddevice (principal) -----------------------------------
+    def _tentar_sounddevice(self) -> bool:
+        """Abre o microfone via sounddevice. Retorna True se funcionar."""
+        try:
+            import sounddevice as sd
+            import speech_recognition as sr  # usado so para reconhecer depois
+
+            self._sr = sr
+            self._reconhecedor = sr.Recognizer()
+
+            indice = self._achar_indice_sd(sd)
+            # Grava um instante para validar que o dispositivo abre mesmo.
+            sd.check_input_settings(device=indice, samplerate=self._sd_fs,
+                                    channels=1)
+            self._sd_indice = indice
+            nome = sd.query_devices(indice)["name"] if indice is not None else "padrao"
+            print(f"[voz] Microfone pronto (sounddevice): {nome}")
+            return True
+        except Exception as exc:
+            print(f"[voz] sounddevice indisponivel ({exc}). Tentando PyAudio...")
+            return False
+
+    @staticmethod
+    def _achar_indice_sd(sd):
+        """Acha o indice (no sounddevice) do microfone pelo MICROFONE_NOME."""
+        if not MICROFONE_NOME:
+            return None
+        alvo = MICROFONE_NOME.lower()
+        for i, dev in enumerate(sd.query_devices()):
+            if dev["max_input_channels"] > 0 and alvo in dev["name"].lower():
+                return i
+        return None
+
+    def _ouvir_sounddevice(self) -> str | None:
+        """Grava do microfone via sounddevice e reconhece com o Google.
+
+        Grava enquanto detecta voz (ate ~2s de silencio) com limite de 8s.
+        """
+        import sounddevice as sd
+        import numpy as np
+
+        fs = self._sd_fs
+        print("[voz] Ouvindo...")
+        try:
+            # Grava um bloco fixo de ate 8 segundos.
+            duracao = 8
+            buffer = sd.rec(int(duracao * fs), samplerate=fs, channels=1,
+                            dtype="int16", device=self._sd_indice)
+            sd.wait()
+        except Exception as exc:
+            print(f"[voz] Erro ao gravar: {exc}")
+            return None
+
+        audio = np.asarray(buffer).flatten()
+        if int(np.abs(audio).max()) < 500:
+            # Praticamente silencio: nada dito.
+            return None
+
+        # Converte para AudioData do speech_recognition e reconhece.
+        try:
+            dados = audio.tobytes()
+            audio_sr = self._sr.AudioData(dados, fs, 2)  # 2 bytes = int16
+            texto = self._reconhecedor.recognize_google(audio_sr, language="pt-BR")
+            print(f"Voce (voz): {texto}")
+            return texto.lower()
+        except self._sr.UnknownValueError:
+            print("[voz] Nao entendi o audio.")
+            return None
+        except Exception as exc:
+            print(f"[voz] Erro ao reconhecer: {exc}")
+            return None
 
     def _candidatos(self, sr) -> list:
         """Lista de indices a tentar, em ordem de preferencia.
@@ -243,6 +328,9 @@ class Ouvinte:
         """Escuta uma frase e devolve o texto reconhecido (ou None)."""
         if not self.disponivel:
             return None
+        if self.motor == "sounddevice":
+            return self._ouvir_sounddevice()
+        # Motor PyAudio (reserva).
         try:
             with self._microfone as fonte:
                 print("[voz] Ouvindo...")

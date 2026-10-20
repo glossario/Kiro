@@ -1,6 +1,10 @@
 # Reconhecimento de voz (fala -> texto)
 # 3.14+ e necessario no Python 3.13 (o modulo "aifc" foi removido do Python).
 SpeechRecognition>=3.14
+# Captura de audio. sounddevice e o motor principal (WASAPI compartilhado,
+# robusto). PyAudio fica como reserva.
+sounddevice>=0.5
+numpy>=2.0
 PyAudio==0.2.14
 
 # Texto -> fala (voz do Jovem Aprendiz)
